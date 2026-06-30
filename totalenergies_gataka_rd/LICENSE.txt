@@ -1,0 +1,27 @@
+## 📄 Licence
+
+**PROPRIETARY SOFTWARE — ALL RIGHTS RESERVED**
+
+Copyright © 2026 Kiryan Energy Ltd
+TotalEnergies Gataka Road Service Station, Kenya
+
+This software, including all source code, dashboards, data visualisations, 
+and associated documentation ("the Software"), is the exclusive intellectual 
+property of Kiryan Energy Ltd.
+
+**Permitted Use:**
+- Internal business operations by authorised Kiryan Energy Ltd personnel only
+- Viewing and analysis of operational data on authorised devices
+
+**Strictly Prohibited Without Prior Written Consent:**
+- Copying, reproducing, or duplicating the Software in whole or in part
+- Distributing, sharing, or transmitting to any third party
+- Modifying, adapting, or creating derivative works
+- Using for commercial purposes outside Kiryan Energy Ltd
+- Reverse engineering or decompiling
+
+Violations may result in civil and/or criminal liability under Kenyan law,
+including the Kenya Copyright Act (Cap. 130) and the Computer Misuse and 
+Cybercrimes Act 2018.
+
+For licensing enquiries: mwangijohngitau1@gmail.com

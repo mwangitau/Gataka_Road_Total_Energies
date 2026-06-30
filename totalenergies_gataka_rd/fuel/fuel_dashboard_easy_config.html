@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TotalEnergies Gataka Road Fuel Pump Analysis</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap');
+
+    :root {
+      --blue-deep: #0a1628;
+      --blue-mid: #003DA5;
+      --blue-accent: #2a5298;
+      --purple: #E2001A;
+      --red: #dc2626;
+      --green: #059669;
+      --amber: #d97706;
+      --bg: #f0f4f8;
+      --card-bg: #ffffff;
+      --text-primary: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Barlow', sans-serif;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse at 0% 0%, rgba(30,60,114,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse at 100% 100%, rgba(126,34,206,0.10) 0%, transparent 60%);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container { max-width: 1600px; margin: 0 auto; }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(135deg, var(--blue-deep) 0%, var(--blue-mid) 60%, var(--purple) 100%);
+      border-radius: 20px; padding: 32px 40px; margin-bottom: 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: 0 8px 32px rgba(15,31,61,0.25);
+      position: relative; overflow: hidden;
+    }
+    .header::before {
+      content: '⛽'; position: absolute; right: -20px; top: -20px;
+      font-size: 160px; opacity: 0.06; transform: rotate(-15deg);
+    }
+    .header-left h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2.6em; font-weight: 900; color: white;
+      letter-spacing: 1px; text-transform: uppercase; line-height: 1;
+    }
+    .header-left .subtitle { color: rgba(255,255,255,0.65); font-size: 0.95em; margin-top: 6px; letter-spacing: 0.5px; }
+    .header-right { text-align: right; color: rgba(255,255,255,0.85); font-size: 0.9em; }
+    .header-right strong { display: block; font-size: 1.1em; color: white; }
+
+    /* ── METRIC CARDS ── */
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px; margin-bottom: 24px;
+    }
+    .metric-card {
+      background: var(--card-bg); border-radius: 14px; padding: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      border-top: 4px solid var(--blue-mid);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .metric-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .metric-card.green-top { border-top-color: var(--green); }
+    .metric-card.red-top   { border-top-color: var(--red); }
+    .metric-card.amber-top { border-top-color: var(--amber); }
+    .m-icon { font-size: 1.6em; margin-bottom: 8px; opacity: 0.8; }
+    .m-value { font-family: 'Barlow Condensed', sans-serif; font-size: 2em; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .m-label { font-size: 0.82em; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+    /* ── SECTION TITLES ── */
+    .section-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.4em; font-weight: 700; color: var(--text-primary);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 2px; background: linear-gradient(to right, var(--blue-mid), transparent); }
+
+    /* ── PUMP TARGET CARDS SECTION ── */
+    .pump-targets-section {
+      background: var(--card-bg); border-radius: 16px; padding: 28px;
+      margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .pump-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .pump-target-card {
+      border-radius: 14px; padding: 22px; color: white;
+      transition: transform 0.2s; position: relative; overflow: hidden;
+    }
+    .pump-target-card:hover { transform: translateY(-3px); }
+    .pump-target-card.pump1 { background: linear-gradient(135deg, #0f172a, #1e293b); }
+    .pump-target-card.pump2 { background: linear-gradient(135deg, #3b0764, #581c87); }
+    .pump-target-card.pump3 { background: linear-gradient(135deg, #064e3b, #065f46); }
+
+    .ptc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .ptc-name { font-family: 'Barlow Condensed', sans-serif; font-size: 1.4em; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+    .ptc-csa { font-size: 0.8em; opacity: 0.7; margin-top: 4px; }
+    .ptc-total { text-align: right; }
+    .ptc-total-val { font-family: 'Barlow Condensed', sans-serif; font-size: 1.9em; font-weight: 700; line-height: 1; }
+    .ptc-total-lbl { font-size: 0.72em; opacity: 0.6; }
+
+    .ptc-products { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .ptc-product { background: rgba(255,255,255,0.12); border-radius: 8px; padding: 8px 10px; }
+    .ptc-product-name { font-size: 0.72em; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ptc-product-val { font-family: 'Barlow Condensed', sans-serif; font-size: 1.15em; font-weight: 700; }
+    .ptc-product-daily { font-size: 0.72em; opacity: 0.6; }
+
+    .ptc-progress-label { display: flex; justify-content: space-between; font-size: 0.78em; opacity: 0.8; margin-bottom: 5px; }
+    .ptc-bar { background: rgba(255,255,255,0.18); height: 12px; border-radius: 6px; overflow: hidden; position: relative; margin-bottom: 6px; }
+    .ptc-fill { height: 100%; border-radius: 6px; transition: width 1s ease; }
+    .ptc-fill.good { background: linear-gradient(to right, #34d399, #10b981); }
+    .ptc-fill.warn { background: linear-gradient(to right, #fbbf24, #f59e0b); }
+    .ptc-fill.bad  { background: linear-gradient(to right, #f87171, #ef4444); }
+    .ptc-pace-marker {
+      position: absolute; top: -2px; width: 3px; height: 16px;
+      background: white; border-radius: 2px; transform: translateX(-50%);
+      box-shadow: 0 0 6px rgba(255,255,255,0.9); z-index: 2;
+    }
+    .ptc-badge {
+      display: inline-block; padding: 4px 12px; border-radius: 20px;
+      font-size: 0.78em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px;
+    }
+    .ptc-badge.on-track { background: rgba(52,211,153,0.25); color: #34d399; }
+    .ptc-badge.below    { background: rgba(251,191,36,0.25);  color: #fbbf24; }
+    .ptc-badge.critical { background: rgba(248,113,113,0.25); color: #f87171; }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      background: var(--card-bg); border-radius: 14px; padding: 18px 24px;
+      margin-bottom: 24px; display: flex; gap: 16px; align-items: flex-end;
+      flex-wrap: wrap; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .filter-group label {
+      display: block; font-size: 0.78em; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    select {
+      padding: 10px 16px; border: 2px solid #e2e8f0; border-radius: 10px;
+      background: white; color: var(--text-primary);
+      font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: border-color 0.2s; outline: none;
+    }
+    select:hover, select:focus { border-color: var(--blue-mid); }
+    .btn {
+      padding: 10px 22px; border: none; border-radius: 10px;
+      background: linear-gradient(135deg, var(--blue-mid), var(--purple));
+      color: white; font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1em; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(30,60,114,0.3);
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(30,60,114,0.4); }
+
+    /* ── CHART CONTAINERS ── */
+    .chart-container {
+      background: var(--card-bg); border-radius: 16px; padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 24px;
+    }
+    .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .charts-grid .chart-container { margin-bottom: 0; }
+    .chart-wrapper { position: relative; height: 320px; }
+    .chart-wrapper.tall { height: 420px; }
+
+    /* ── CHART TABS ── */
+    .chart-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .tab-btn {
+      padding: 8px 16px; border: none; border-radius: 8px; color: white;
+      font-family: 'Barlow Condensed', sans-serif; font-size: 0.95em; font-weight: 600;
+      letter-spacing: 0.3px; cursor: pointer; opacity: 0.55; transition: all 0.2s;
+    }
+    .tab-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+    .tab-btn.active { opacity: 1; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform: translateY(-2px); }
+    .tab-btn.pump1-btn { background: linear-gradient(135deg, #0f172a, #1e293b); }
+    .tab-btn.pump2-btn { background: linear-gradient(135deg, #3b0764, #581c87); }
+    .tab-btn.pump3-btn { background: linear-gradient(135deg, #064e3b, #065f46); }
+    .tab-btn.all-btn   { background: linear-gradient(135deg, var(--blue-mid), var(--purple)); }
+
+    /* ── LEGEND ── */
+    .target-legend {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      margin-top: 14px; padding: 12px 16px;
+      background: #f8fafc; border-radius: 10px; font-size: 0.85em; color: var(--text-muted);
+    }
+    .legend-item { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+    .legend-swatch { width: 14px; height: 14px; border-radius: 3px; opacity: 0.75; }
+
+    /* ── INSIGHTS ── */
+    .insights-section {
+      background: var(--card-bg); border-radius: 16px; padding: 24px;
+      margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .insights-list { list-style: none; }
+    .insights-list li {
+      padding: 14px 16px; border-left: 3px solid var(--blue-mid);
+      background: #f8fafc; border-radius: 0 10px 10px 0;
+      margin-bottom: 10px; font-size: 0.92em;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .insights-list li:hover { transform: translateX(6px); box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+
+    /* ── DATA TABLE ── */
+    .table-section {
+      background: var(--card-bg); border-radius: 16px; padding: 24px;
+      margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .table-scroll { overflow-x: auto; max-height: 480px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: linear-gradient(135deg, var(--blue-deep), var(--blue-mid));
+      color: white; padding: 12px 14px; text-align: left;
+      font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+      letter-spacing: 0.5px; font-size: 0.9em; text-transform: uppercase;
+      position: sticky; top: 0; z-index: 10;
+    }
+    tbody td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; font-size: 0.88em; }
+    tbody tr:hover { background: #f8fafc; }
+
+    /* ── DATE RANGE PILL ── */
+    .date-range {
+      background: var(--card-bg); border-radius: 10px; padding: 12px 18px;
+      margin-bottom: 20px; font-size: 0.88em; color: var(--text-muted);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 4px solid var(--blue-mid);
+    }
+
+    /* ── SPINNER ── */
+    .loading-spinner { display: flex; justify-content: center; align-items: center; height: 200px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: var(--blue-mid); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── FOOTER ── */
+    footer {
+      background: linear-gradient(135deg, var(--blue-deep), #1e293b);
+      color: rgba(255,255,255,0.7); border-radius: 14px; padding: 20px 28px;
+      text-align: center; font-size: 0.83em; line-height: 1.8;
+    }
+    footer strong { color: white; }
+
+    @media (max-width: 900px) { .pump-cards-grid { grid-template-columns: 1fr; } .charts-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) { .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); } .filter-bar { flex-direction: column; align-items: stretch; } }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-left">
+      <h1>⛽ Gataka Road Pump Performance Dashboard</h1>
+      <div class="subtitle">Volume Sales · Per-Pump Target Tracking · CSA Accreditation</div>
+    </div>
+    <div class="header-right">
+      <strong>Kiryan Energy Ltd</strong>
+      <span>TotalEnergies Gataka Rd SS · Confidential · v3.0</span>
+    </div>
+  </div>
+
+  <div class="date-range" id="dateRange"></div>
+  <div class="metrics-grid" id="metricsGrid">
+    <div class="loading-spinner" style="grid-column:1/-1"><div class="spinner"></div></div>
+  </div>
+
+  <!-- PER-PUMP TARGET PROGRESS -->
+  <div class="pump-targets-section">
+    <div class="section-title">🎯 Per-Pump Target Progress</div>
+    <div class="pump-cards-grid" id="pumpTargetCards">
+      <div class="loading-spinner"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>📅 Month</label>
+      <select id="monthFilter" onchange="loadFuelData()"></select>
+    </div>
+    <div class="filter-group">
+      <label>👤 Attendant</label>
+      <select id="attendantFilter"><option value="all">All Attendants</option></select>
+    </div>
+    <div class="filter-group">
+      <label>⛽ Pump</label>
+      <select id="pumpFilter">
+        <option value="all">All Pumps</option>
+        <option value="pump1">Pump 1</option>
+        <option value="pump2">Pump 2</option>
+        <option value="pump3">Pump 3</option>
+      </select>
+    </div>
+    <button class="btn" onclick="updateAnalysis()">🔄 Update</button>
+  </div>
+
+  <!-- DAILY TREND CHART with per-pump target tabs -->
+  <div class="chart-container">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+      <div style="font-weight:700;font-size:1.1em;color:#1e293b;">
+        📈 Daily Volume vs Daily Target
+        <span style="font-size:0.72em;font-weight:400;color:#64748b;margin-left:8px;">Green = above · Red = below</span>
+      </div>
+      <div class="chart-tabs">
+        <button class="tab-btn all-btn active" onclick="switchChartTab('all')" id="tab-all">📊 All Pumps</button>
+        <button class="tab-btn pump1-btn" onclick="switchChartTab('pump1')" id="tab-pump1">🔵 Pump 1</button>
+        <button class="tab-btn pump2-btn" onclick="switchChartTab('pump2')" id="tab-pump2">🟣 Pump 2</button>
+        <button class="tab-btn pump3-btn" onclick="switchChartTab('pump3')" id="tab-pump3">🟢 Pump 3</button>
+      </div>
+    </div>
+
+    <div id="chartPanel-all" style="display:block;"><div class="chart-wrapper tall"><canvas id="chart-all"></canvas></div></div>
+    <div id="chartPanel-pump1" style="display:none;"><div class="chart-wrapper tall"><canvas id="chart-pump1"></canvas></div></div>
+    <div id="chartPanel-pump2" style="display:none;"><div class="chart-wrapper tall"><canvas id="chart-pump2"></canvas></div></div>
+    <div id="chartPanel-pump3" style="display:none;"><div class="chart-wrapper tall"><canvas id="chart-pump3"></canvas></div></div>
+
+    <div class="target-legend">
+      <div class="legend-item"><div style="width:28px;height:3px;background:#667eea;border-radius:2px;"></div> Actual Volume</div>
+      <div class="legend-item"><div style="width:28px;height:0;border-top:2px dashed #f59e0b;"></div> Daily Target</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(16,185,129,0.3);border:1px solid #10b981;"></div> Above Target</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(220,38,38,0.2);border:1px solid #dc2626;"></div> Below Target</div>
+      <div id="dailyTargetInfo" style="margin-left:auto;font-weight:600;color:#764ba2;font-size:0.88em;"></div>
+    </div>
+  </div>
+
+  <!-- ATTENDANT + PUMP CHARTS -->
+  <div class="charts-grid">
+    <div class="chart-container">
+      <div class="chart-wrapper"><canvas id="attendantChart"></canvas></div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrapper"><canvas id="pumpChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="insights-section">
+    <div class="section-title">🚨 Key Insights & CSA Performance</div>
+    <ul class="insights-list" id="insightsList"></ul>
+  </div>
+
+  <!-- DATA TABLE -->
+  <div class="table-section">
+    <div class="section-title">📋 Detailed Daily Data</div>
+    <div class="table-scroll">
+      <table id="dataTable"></table>
+    </div>
+  </div>
+
+  <footer>
+    <p><strong>© 2026 Kiryan Energy Ltd — All Rights Reserved</strong></p>
+    <p><strong>Confidential:</strong> For official use only. Not for distribution.</p>
+    <p>Dashboard v3.0 · Per-Pump Target Tracking · CSA Accreditation Enabled</p>
+  </footer>
+</div>
+
+<script>
+  // ============================================================================
+  // DATA SOURCES
+  // ============================================================================
+  const dataSources = {
+    // 👉 PASTE YOUR GATAKA ROAD FUEL PUMP GOOGLE SHEETS CSV LINK(S) HERE — one per month.
+    // Sheet columns expected: DAY, NAME OF CSA, PUMP 1, NAME OF CSA.1, PUMP 2, NAME OF CSA.2, PUMP 3
+    "June 2026": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Vge2bjSMRupBbKxo0eIcoTUYUIXV0NaPbH8St93p5cWqvTnUJJ-9yY-mMNEA6beUIGpqi0lqw1qs/pub?gid=1064673143&single=true&output=csv",
+  };
+
+  // ============================================================================
+  // PER-PUMP MONTHLY TARGETS
+  // Gataka Road nozzle layout (from station config):
+  //   Pump 1: AGO1, AGO2, PMS1, PMS2 (2 AGO + 2 PMS nozzles)
+  //   Pump 2: AGO3, AGO4, PMS3, PMS4 (2 AGO + 2 PMS nozzles) — centre of island, highest traffic
+  //   Pump 3: AGO5 (1 AGO nozzle only)
+  // Station monthly totals: PMS 108,000 L · AGO 72,000 L → 180,000 L
+  // 👉 ADJUST THE SPLIT BELOW once you have real per-pump litreage —
+  //    these percentages (35/45/20) are placeholders weighted for Pump 2's
+  //    central-island advantage; equal nozzle count between Pump 1 & 2.
+  // ============================================================================
+  const PUMP_TARGETS = {
+    pump1: { total: 63000 },  // 35% — AGO1/AGO2/PMS1/PMS2
+    pump2: { total: 81000 },  // 45% — AGO3/AGO4/PMS3/PMS4 (centre island)
+    pump3: { total: 36000 },  // 20% — AGO5 only
+  };
+  const PUMP_COLORS = { pump1: '#1d4ed8', pump2: '#E2001A', pump3: '#059669' };
+  const PUMP_LABELS = { pump1: 'Pump 1 (AGO1·AGO2·PMS1·PMS2)', pump2: 'Pump 2 (AGO3·AGO4·PMS3·PMS4)', pump3: 'Pump 3 (AGO5)' };
+  const STATION_TOTAL_TARGET = 63000 + 81000 + 36000; // 180,000
+
+  // ============================================================================
+  // STATE
+  // ============================================================================
+  let processedData = [], attendantsSet = new Set(), charts = {};
+
+  function getDaysInMonth(monthStr) {
+    if (monthStr === 'combined') return 30;
+    const d = new Date(monthStr + ' 1');
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  }
+
+  function initializeMonthFilter() {
+    const sel = document.getElementById('monthFilter');
+    sel.innerHTML = '';
+    Object.keys(dataSources).reverse().forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = m; sel.appendChild(opt);
+    });
+    const comb = document.createElement('option');
+    comb.value = 'combined'; comb.textContent = 'Combined (All Months)';
+    sel.appendChild(comb);
+  }
+
+  function csvToArray(csv) {
+    const lines = csv.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    return lines.slice(1).map(line => {
+      const items = line.split(',');
+      let obj = {};
+      headers.forEach((h, i) => { obj[h] = items[i] ? items[i].trim() : ''; });
+      return obj;
+    });
+  }
+
+  function formatDate(str) {
+    const parts = str.split('.');
+    if (parts.length < 3) return str;
+    if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+    return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+  }
+
+  function fmtLong(d) {
+    return new Date(d).toLocaleDateString('en-US', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+  }
+  function fmtShort(d) {
+    return new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  }
+
+  // ============================================================================
+  // DATA LOAD
+  // ============================================================================
+  async function loadFuelData() {
+    document.getElementById('metricsGrid').innerHTML = '<div class="loading-spinner" style="grid-column:1/-1"><div class="spinner"></div></div>';
+    try {
+      const sel = document.getElementById('monthFilter').value;
+      processedData = []; attendantsSet = new Set();
+      if (sel === 'combined') {
+        for (const [m, url] of Object.entries(dataSources)) await loadMonthData(url, m);
+      } else {
+        await loadMonthData(dataSources[sel], sel);
+      }
+      if (!processedData.length) throw new Error('No valid data found.');
+      processedData.sort((a,b) => new Date(a.date)-new Date(b.date));
+      updateDateRange();
+      populateFilters();
+      updateAnalysis();
+    } catch(e) {
+      document.getElementById('metricsGrid').innerHTML = `<div style="grid-column:1/-1;text-align:center;color:red;padding:30px;"><h3>❌ ${e.message}</h3><button onclick="loadFuelData()">🔄 Retry</button></div>`;
+    }
+  }
+
+  async function loadMonthData(url, monthName) {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${monthName}`);
+    const rows = csvToArray(await resp.text());
+    rows.forEach(row => {
+      const dv = row.DAY;
+      if (!dv || dv === 'TOTALS' || dv === '') return;
+      let dateStr = dv;
+      if (dv.includes('PRICE CHANGE')) {
+        const m = dv.match(/(\d{4}\.\d{1,2}\.\d{1,2})/);
+        if (m) dateStr = m[1]; else return;
+      } else if (!dv.match(/\d/)) return;
+      const date = formatDate(dateStr);
+      if (!date || !date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
+
+      const pump1 = { attendant: (row['NAME OF CSA']||'Unknown').trim(),   value: Math.abs(parseFloat(row['PUMP 1'])||0) };
+      const pump2 = { attendant: (row['NAME OF CSA.1']||'Unknown').trim(), value: Math.abs(parseFloat(row['PUMP 2'])||0) };
+      const pump3 = { attendant: (row['NAME OF CSA.2']||'Unknown').trim(), value: Math.abs(parseFloat(row['PUMP 3'])||0) };
+
+      processedData.push({ date, pump1, pump2, pump3, total: pump1.value+pump2.value+pump3.value });
+      [pump1,pump2,pump3].forEach(p => { if (p.attendant && p.attendant !== 'Unknown') attendantsSet.add(p.attendant); });
+    });
+  }
+
+  function updateDateRange() {
+    if (!processedData.length) return;
+    const sel = document.getElementById('monthFilter').value;
+    const label = sel === 'combined' ? 'All Months' : sel;
+    document.getElementById('dateRange').innerHTML = `📅 <strong>${label}</strong> — ${fmtLong(processedData[0].date)} to ${fmtLong(processedData[processedData.length-1].date)} (${processedData.length} days)`;
+  }
+
+  function populateFilters() {
+    const af = document.getElementById('attendantFilter');
+    af.innerHTML = '<option value="all">All Attendants</option>';
+    [...attendantsSet].sort().forEach(a => {
+      const o = document.createElement('option'); o.value = a; o.textContent = a; af.appendChild(o);
+    });
+  }
+
+  function getFilteredData() {
+    const att = document.getElementById('attendantFilter').value;
+    const pf  = document.getElementById('pumpFilter').value;
+    return processedData.map(r => {
+      const pumps = {};
+      ['pump1','pump2','pump3'].forEach((key,i) => {
+        const pName = ['pump1','pump2','pump3'][i];
+        pumps[key] = { ...r[key] };
+        if ((att !== 'all' && r[key].attendant !== att) || (pf !== 'all' && pf !== pName)) {
+          pumps[key] = { attendant: r[key].attendant, value: 0 };
+        }
+      });
+      return { date: r.date, ...pumps, total: pumps.pump1.value+pumps.pump2.value+pumps.pump3.value };
+    });
+  }
+
+  // ============================================================================
+  // METRICS
+  // ============================================================================
+  function updateMetrics(filtered) {
+    const sel = document.getElementById('monthFilter').value;
+    const daysInMonth = getDaysInMonth(sel);
+
+    // Aggregate
+    const dailyTotals = {}, attTotals = {};
+    const pumpDailyTotals = { pump1: {}, pump2: {}, pump3: {} };
+    const pumpMonthTotals = { pump1: 0, pump2: 0, pump3: 0 };
+
+    filtered.forEach(r => {
+      dailyTotals[r.date] = (dailyTotals[r.date]||0) + r.total;
+      ['pump1','pump2','pump3'].forEach(pk => {
+        const p = r[pk];
+        pumpDailyTotals[pk][r.date] = (pumpDailyTotals[pk][r.date]||0) + p.value;
+        pumpMonthTotals[pk] += p.value;
+        if (p.attendant && p.attendant !== 'Unknown') {
+          attTotals[p.attendant] = (attTotals[p.attendant]||0) + p.value;
+        }
+      });
+    });
+
+    const total = Object.values(dailyTotals).reduce((a,b)=>a+b,0);
+
+    // Daily average: for the current month divide by yesterday's date (completed days only).
+    // For past months divide by the number of days with data.
+    const now = new Date();
+    const selMonth = sel !== 'combined' ? new Date(sel + ' 1') : null;
+    const isCurrentMonth = selMonth &&
+      now.getFullYear() === selMonth.getFullYear() &&
+      now.getMonth()    === selMonth.getMonth();
+    const yesterday = now.getDate() - 1; // days completed as of today
+    const daysAccumulated = isCurrentMonth
+      ? Math.max(yesterday, 1)                      // e.g. today=23 → divide by 22
+      : (Object.keys(dailyTotals).length || 1);     // past months: use actual data days
+    const avg = total / daysAccumulated;
+    const stationDailyTarget = STATION_TOTAL_TARGET / daysInMonth;
+    const daysAbove = Object.values(dailyTotals).filter(v=>v>=stationDailyTarget).length;
+    const daysBelow = Object.values(dailyTotals).filter(v=>v>0&&v<stationDailyTarget).length;
+    const topAtt = Object.keys(attTotals).reduce((a,b)=>attTotals[a]>attTotals[b]?a:b, '-');
+    const overallPct = ((total/STATION_TOTAL_TARGET)*100).toFixed(1);
+
+    document.getElementById('metricsGrid').innerHTML = `
+      <div class="metric-card">
+        <div class="m-icon">📊</div>
+        <div class="m-value">${total.toLocaleString()} L</div>
+        <div class="m-label">Total Volume Sold</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-icon">📈</div>
+        <div class="m-value">${Math.round(avg).toLocaleString()} L</div>
+        <div class="m-label">Daily Avg (${daysAccumulated} days)</div>
+      </div>
+      <div class="metric-card ${parseFloat(overallPct)<70?'red-top':parseFloat(overallPct)<90?'amber-top':'green-top'}">
+        <div class="m-icon">🎯</div>
+        <div class="m-value">${overallPct}%</div>
+        <div class="m-label">Overall Target Progress</div>
+      </div>
+      <div class="metric-card green-top">
+        <div class="m-icon">✅</div>
+        <div class="m-value">${daysAbove}</div>
+        <div class="m-label">Days Above Target</div>
+      </div>
+      <div class="metric-card red-top">
+        <div class="m-icon">🔴</div>
+        <div class="m-value">${daysBelow}</div>
+        <div class="m-label">Days Below Target</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-icon">🏆</div>
+        <div class="m-value" style="font-size:1.3em">${topAtt}</div>
+        <div class="m-label">Top Performer</div>
+      </div>`;
+
+    updatePumpTargetCards(pumpMonthTotals, pumpDailyTotals, daysInMonth);
+    return { dailyTotals, attTotals, pumpDailyTotals, pumpMonthTotals };
+  }
+
+  // ============================================================================
+  // PER-PUMP TARGET CARDS
+  // ============================================================================
+  function updatePumpTargetCards(pumpMonthTotals, pumpDailyTotals, daysInMonth) {
+    const sel = document.getElementById('monthFilter').value;
+    const now = new Date();
+    const monthDate = new Date(sel + ' 1');
+    const isCurrent = sel !== 'combined' && now.getFullYear()===monthDate.getFullYear() && now.getMonth()===monthDate.getMonth();
+    const daysElapsed = isCurrent ? Math.min(now.getDate(), daysInMonth) : daysInMonth;
+    const daysLeft = Math.max(daysInMonth - daysElapsed, 0);
+
+    const cardClasses = { pump1: 'pump1', pump2: 'pump2', pump3: 'pump3' };
+
+    // Get last known CSA for each pump
+    const lastCSA = { pump1: '', pump2: '', pump3: '' };
+    processedData.slice().reverse().forEach(r => {
+      ['pump1','pump2','pump3'].forEach(pk => {
+        if (!lastCSA[pk] && r[pk].attendant && r[pk].attendant !== 'Unknown') {
+          lastCSA[pk] = r[pk].attendant;
+        }
+      });
+    });
+
+    const html = ['pump1','pump2','pump3'].map(pk => {
+      const tgt = PUMP_TARGETS[pk];
+      const sold = pumpMonthTotals[pk];
+      const pct = Math.min((sold/tgt.total)*100, 100);
+      const remaining = Math.max(tgt.total - sold, 0);
+      const dailyNeeded = daysLeft > 0 ? remaining/daysLeft : 0;
+      const expectedPace = (tgt.total/daysInMonth)*daysElapsed;
+      const pacePct = Math.min((expectedPace/tgt.total)*100, 100);
+
+      let fillClass, badgeClass, badgeText;
+      if (pct >= pacePct - 5) { fillClass='good'; badgeClass='on-track'; badgeText='✅ On Track'; }
+      else if (pct >= pacePct - 15) { fillClass='warn'; badgeClass='below'; badgeText='⚠️ Below Pace'; }
+      else { fillClass='bad'; badgeClass='critical'; badgeText='🚨 Behind Target'; }
+
+      // Products breakdown — only show non-zero targets
+      const productBreakdown = Object.entries(tgt)
+        .filter(([k,v]) => k !== 'total' && v > 0)
+        .map(([k,v]) => `
+          <div class="ptc-product">
+            <div class="ptc-product-name">${productLabels[k]||k}</div>
+            <div class="ptc-product-val">${v.toLocaleString()} L</div>
+            <div class="ptc-product-daily">${(v/daysInMonth).toLocaleString(undefined,{maximumFractionDigits:0})} L/day</div>
+          </div>`).join('');
+
+      return `
+        <div class="pump-target-card ${cardClasses[pk]}">
+          <div class="ptc-header">
+            <div>
+              <div class="ptc-name">${PUMP_LABELS[pk]}</div>
+              <div class="ptc-csa">👤 ${lastCSA[pk]||'No CSA recorded'}</div>
+            </div>
+            <div class="ptc-total">
+              <div class="ptc-total-val">${sold.toLocaleString(undefined,{maximumFractionDigits:0})} L</div>
+              <div class="ptc-total-lbl">of ${tgt.total.toLocaleString()} L</div>
+            </div>
+          </div>
+          <div class="ptc-products">${productBreakdown}</div>
+          <div class="ptc-progress-label">
+            <span>${pct.toFixed(1)}% achieved</span>
+            <span>Expected: ${pacePct.toFixed(1)}%</span>
+          </div>
+          <div class="ptc-bar">
+            <div class="ptc-fill ${fillClass}" style="width:${pct}%"></div>
+            <div class="ptc-pace-marker" style="left:${pacePct}%"></div>
+          </div>
+          <div style="font-size:0.78em;opacity:0.65;margin-bottom:4px;">
+            ${daysLeft > 0 ? `Need <strong>${dailyNeeded.toLocaleString(undefined,{maximumFractionDigits:0})} L/day</strong> over ${daysLeft} remaining days` : 'Month complete'}
+          </div>
+          <div class="ptc-badge ${badgeClass}">${badgeText}</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('pumpTargetCards').innerHTML = html;
+  }
+
+  // ============================================================================
+  // CHARTS
+  // ============================================================================
+  const shadedGapPlugin = {
+    id: 'shadedGap',
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea: { top, bottom, left, right } } = chart;
+      const am = chart.getDatasetMeta(0), tm = chart.getDatasetMeta(1);
+      if (!am.data.length || !tm.data.length) return;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(left, top, right-left, bottom-top); ctx.clip();
+      const n = am.data.length;
+      for (let i = 0; i < n-1; i++) {
+        const ax0=am.data[i].x, ay0=am.data[i].y, ax1=am.data[i+1].x, ay1=am.data[i+1].y;
+        const tx0=tm.data[i].x, ty0=tm.data[i].y, tx1=tm.data[i+1].x, ty1=tm.data[i+1].y;
+        const da0=ay0-ty0, da1=ay1-ty1;
+        const cross = (da0>0&&da1<0)||(da0<0&&da1>0);
+        if (!cross) {
+          ctx.beginPath(); ctx.moveTo(ax0,ay0); ctx.lineTo(ax1,ay1); ctx.lineTo(tx1,ty1); ctx.lineTo(tx0,ty0); ctx.closePath();
+          ctx.fillStyle = da0<=0 ? 'rgba(16,185,129,0.22)' : 'rgba(220,38,38,0.18)'; ctx.fill();
+        } else {
+          const t=da0/(da0-da1), cx=ax0+t*(ax1-ax0), cy=ay0+t*(ay1-ay0), tcy=ty0+t*(ty1-ty0);
+          ctx.beginPath(); ctx.moveTo(ax0,ay0); ctx.lineTo(cx,cy); ctx.lineTo(cx,tcy); ctx.lineTo(tx0,ty0); ctx.closePath();
+          ctx.fillStyle = da0<=0 ? 'rgba(16,185,129,0.22)' : 'rgba(220,38,38,0.18)'; ctx.fill();
+          ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ax1,ay1); ctx.lineTo(tx1,ty1); ctx.lineTo(cx,tcy); ctx.closePath();
+          ctx.fillStyle = da1<=0 ? 'rgba(16,185,129,0.22)' : 'rgba(220,38,38,0.18)'; ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+  };
+
+  function buildShadedChart(canvasId, labels, actualData, dailyTarget, lineColor, titleText) {
+    const existing = Chart.getChart(canvasId);
+    if (existing) existing.destroy();
+    const targetData = labels.map(() => parseFloat(dailyTarget.toFixed(2)));
+    return new Chart(document.getElementById(canvasId).getContext('2d'), {
+      type: 'line',
+      plugins: [shadedGapPlugin],
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Actual Volume (L)',
+            data: actualData,
+            borderColor: lineColor,
+            backgroundColor: 'transparent',
+            borderWidth: 2.5, tension: 0.35, fill: false,
+            pointRadius: 5, pointHoverRadius: 7,
+            pointBackgroundColor: actualData.map(v => v >= dailyTarget ? '#10b981' : '#dc2626'),
+            pointBorderColor: 'white', pointBorderWidth: 1.5, order: 1
+          },
+          {
+            label: `Target (${Math.round(dailyTarget).toLocaleString()} L/day)`,
+            data: targetData,
+            borderColor: '#f59e0b', backgroundColor: 'transparent',
+            borderWidth: 2, borderDash: [10,5], tension: 0,
+            fill: false, pointRadius: 0, order: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          title: { display: true, text: titleText, font: { size: 14, weight: 'bold' } },
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              afterBody(items) {
+                const idx = items[0]?.dataIndex;
+                if (idx === undefined) return '';
+                const diff = actualData[idx] - dailyTarget;
+                const s = diff >= 0 ? '+' : '';
+                return [`${diff>=0?'✅ Above':'🔴 Below'} target: ${s}${diff.toLocaleString(undefined,{maximumFractionDigits:1})} L`];
+              }
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString()+' L' }, title: { display: true, text: 'Litres' } },
+          x: { ticks: { maxRotation: 45 }, grid: { color: 'rgba(0,0,0,0.05)' } }
+        }
+      }
+    });
+  }
+
+  function createCharts(dailyTotals, attTotals, pumpDailyTotals) {
+    Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
+    charts = {};
+
+    const sel = document.getElementById('monthFilter').value;
+    const daysInMonth = getDaysInMonth(sel);
+    const sortedDates = Object.keys(dailyTotals).sort();
+    const labels = sortedDates.map(fmtShort);
+
+    // Station daily target info
+    const stationDaily = STATION_TOTAL_TARGET / daysInMonth;
+    document.getElementById('dailyTargetInfo').textContent =
+      `🎯 Station daily target: ${stationDaily.toLocaleString(undefined,{maximumFractionDigits:0})} L/day`;
+
+    // ALL PUMPS combined chart
+    charts.all = buildShadedChart(
+      'chart-all', labels,
+      sortedDates.map(d => dailyTotals[d]||0),
+      stationDaily, '#667eea',
+      'All Pumps — Daily Station Volume vs Target'
+    );
+
+    // Per-pump charts
+    ['pump1','pump2','pump3'].forEach(pk => {
+      const pumpDaily = PUMP_TARGETS[pk].total / daysInMonth;
+      const actualData = sortedDates.map(d => pumpDailyTotals[pk][d]||0);
+      charts[pk] = buildShadedChart(
+        `chart-${pk}`, labels, actualData, pumpDaily,
+        PUMP_COLORS[pk],
+        `${PUMP_LABELS[pk]} — Daily Volume vs Target (${Math.round(pumpDaily).toLocaleString()} L/day)`
+      );
+    });
+
+    // ATTENDANT chart
+    const attLabels = Object.keys(attTotals).sort((a,b)=>attTotals[b]-attTotals[a]);
+    const attColors = ['#667eea','#764ba2','#f093fb','#4facfe','#00f2fe','#f59e0b','#10b981'];
+    const attChart = Chart.getChart('attendantChart');
+    if (attChart) attChart.destroy();
+    charts.attendant = new Chart(document.getElementById('attendantChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: attLabels,
+        datasets: [{
+          label: 'Total Volume (L)',
+          data: attLabels.map(a => attTotals[a]),
+          backgroundColor: attLabels.map((_,i) => attColors[i % attColors.length]),
+          borderRadius: 8, borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: 'CSA Performance — Total Volume Sold', font: { size: 14, weight: 'bold' } },
+          legend: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString()+' L' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // PUMP doughnut
+    const pumpChart = Chart.getChart('pumpChart');
+    if (pumpChart) pumpChart.destroy();
+    charts.pump = new Chart(document.getElementById('pumpChart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Pump 1','Pump 2','Pump 3'],
+        datasets: [{
+          data: ['pump1','pump2','pump3'].map(pk => Object.values(pumpDailyTotals[pk]).reduce((a,b)=>a+b,0)),
+          backgroundColor: [PUMP_COLORS.pump1, PUMP_COLORS.pump2, PUMP_COLORS.pump3],
+          borderWidth: 3, borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: 'Volume Distribution by Pump', font: { size: 14, weight: 'bold' } },
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+
+  // ============================================================================
+  // TAB SWITCHER
+  // ============================================================================
+  function switchChartTab(tab) {
+    ['all','pump1','pump2','pump3'].forEach(t => {
+      document.getElementById(`chartPanel-${t}`).style.display = t === tab ? 'block' : 'none';
+      document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+    });
+    // Update target info pill
+    const sel = document.getElementById('monthFilter').value;
+    const daysInMonth = getDaysInMonth(sel);
+    if (tab === 'all') {
+      document.getElementById('dailyTargetInfo').textContent =
+        `🎯 Station: ${Math.round(STATION_TOTAL_TARGET/daysInMonth).toLocaleString()} L/day`;
+    } else {
+      const tgt = PUMP_TARGETS[tab];
+      document.getElementById('dailyTargetInfo').textContent =
+        `🎯 ${PUMP_LABELS[tab]}: ${Math.round(tgt.total/daysInMonth).toLocaleString()} L/day`;
+    }
+    setTimeout(() => { if (charts[tab]) charts[tab].resize(); }, 50);
+  }
+
+  // ============================================================================
+  // INSIGHTS
+  // ============================================================================
+  function updateInsights(dailyTotals, attTotals, pumpDailyTotals) {
+    const sel = document.getElementById('monthFilter').value;
+    const daysInMonth = getDaysInMonth(sel);
+    const daysElapsed = Object.keys(dailyTotals).length || 1;
+    const daysLeft = Math.max(daysInMonth - daysElapsed, 0);
+    const total = Object.values(dailyTotals).reduce((a,b)=>a+b,0);
+    const stationDaily = STATION_TOTAL_TARGET / daysInMonth;
+    const daysAbove = Object.values(dailyTotals).filter(v=>v>=stationDaily).length;
+    const bestDay = Object.keys(dailyTotals).reduce((a,b)=>dailyTotals[a]>dailyTotals[b]?a:b,'-');
+    const worstDay = Object.keys(dailyTotals).reduce((a,b)=>dailyTotals[a]<dailyTotals[b]?a:b,'-');
+    const shortfall = STATION_TOTAL_TARGET - total;
+    const neededPerDay = daysLeft > 0 ? shortfall/daysLeft : 0;
+
+    // CSA ranking
+    const csaRanking = Object.entries(attTotals).sort((a,b)=>b[1]-a[1]);
+
+    // Per-pump status
+    const pumpInsights = ['pump1','pump2','pump3'].map(pk => {
+      const tgt = PUMP_TARGETS[pk].total;
+      const sold = Object.values(pumpDailyTotals[pk]).reduce((a,b)=>a+b,0);
+      const pct = (sold/tgt*100).toFixed(1);
+      const remaining = Math.max(tgt-sold,0);
+      const needed = daysLeft>0 ? (remaining/daysLeft).toFixed(0) : 0;
+      const expectedPace = (tgt/daysInMonth)*daysElapsed;
+      const status = sold >= expectedPace ? '✅' : sold >= expectedPace*0.85 ? '⚠️' : '🚨';
+      return `${status} <strong>${PUMP_LABELS[pk]}</strong>: ${pct}% of target — need <strong>${Number(needed).toLocaleString()} L/day</strong> remaining.`;
+    });
+
+    const insights = [
+      `📊 Total station volume: <strong>${total.toLocaleString()} L</strong> over ${daysElapsed} days`,
+      `🎯 Station target: <strong>${STATION_TOTAL_TARGET.toLocaleString()} L</strong> — ${shortfall>0 ? `need <strong>${shortfall.toLocaleString(undefined,{maximumFractionDigits:0})} L</strong> more (${neededPerDay>0?neededPerDay.toLocaleString(undefined,{maximumFractionDigits:0})+' L/day for '+daysLeft+' days':'month complete'})` : '<strong style="color:#059669">TARGET ACHIEVED 🎉</strong>'}`,
+      `✅ Days above daily target: <strong>${daysAbove}</strong> of ${daysElapsed}`,
+      ...pumpInsights,
+      csaRanking.length > 0 ? `🏆 CSA Rankings: ${csaRanking.map((([name,vol],i)=>`<strong>#${i+1} ${name}</strong> (${vol.toLocaleString()} L)`)).join(' · ')}` : '',
+      `🔥 Peak day: <strong>${fmtLong(bestDay)}</strong> — ${(dailyTotals[bestDay]||0).toLocaleString()} L`,
+      `📉 Lowest day: <strong>${fmtLong(worstDay)}</strong> — ${(dailyTotals[worstDay]||0).toLocaleString()} L`,
+    ].filter(Boolean);
+
+    document.getElementById('insightsList').innerHTML = insights.map(i=>`<li>${i}</li>`).join('');
+  }
+
+  // ============================================================================
+  // DATA TABLE
+  // ============================================================================
+  function updateDataTable(filtered) {
+    const sel = document.getElementById('monthFilter').value;
+    const daysInMonth = getDaysInMonth(sel);
+    const stationDaily = STATION_TOTAL_TARGET / daysInMonth;
+    const p1Daily = PUMP_TARGETS.pump1.total / daysInMonth;
+    const p2Daily = PUMP_TARGETS.pump2.total / daysInMonth;
+    const p3Daily = PUMP_TARGETS.pump3.total / daysInMonth;
+
+    const vsTarget = (val, target) => {
+      const diff = val - target;
+      return diff >= 0
+        ? `<span style="color:#059669;font-weight:700">+${diff.toLocaleString(undefined,{maximumFractionDigits:0})}L ✅</span>`
+        : `<span style="color:#dc2626;font-weight:700">${diff.toLocaleString(undefined,{maximumFractionDigits:0})}L 🔴</span>`;
+    };
+
+    let html = `<thead><tr>
+      <th>📅 Date</th>
+      <th>👤 Pump 1 CSA</th><th>📊 P1 Vol</th><th>vs P1 Target</th>
+      <th>👤 Pump 2 CSA</th><th>📊 P2 Vol</th><th>vs P2 Target</th>
+      <th>👤 Pump 3 CSA</th><th>📊 P3 Vol</th><th>vs P3 Target</th>
+      <th>💰 Total</th><th>vs Station</th>
+    </tr></thead><tbody>`;
+
+    filtered.forEach(r => {
+      html += `<tr>
+        <td>${fmtShort(r.date)}</td>
+        <td><strong>${r.pump1.attendant}</strong></td>
+        <td>${r.pump1.value.toLocaleString()} L</td>
+        <td>${vsTarget(r.pump1.value, p1Daily)}</td>
+        <td><strong>${r.pump2.attendant}</strong></td>
+        <td>${r.pump2.value.toLocaleString()} L</td>
+        <td>${vsTarget(r.pump2.value, p2Daily)}</td>
+        <td><strong>${r.pump3.attendant}</strong></td>
+        <td>${r.pump3.value.toLocaleString()} L</td>
+        <td>${vsTarget(r.pump3.value, p3Daily)}</td>
+        <td><strong>${r.total.toLocaleString()} L</strong></td>
+        <td>${vsTarget(r.total, stationDaily)}</td>
+      </tr>`;
+    });
+
+    document.getElementById('dataTable').innerHTML = html + '</tbody>';
+  }
+
+  // ============================================================================
+  // MAIN UPDATE
+  // ============================================================================
+  function updateAnalysis() {
+    const filtered = getFilteredData();
+    const { dailyTotals, attTotals, pumpDailyTotals, pumpMonthTotals } = updateMetrics(filtered);
+    createCharts(dailyTotals, attTotals, pumpDailyTotals);
+    updateInsights(dailyTotals, attTotals, pumpDailyTotals);
+    updateDataTable(filtered);
+    switchChartTab('all');
+  }
+
+  window.onload = () => { initializeMonthFilter(); loadFuelData(); };
+</script>
+</body>
+</html>
