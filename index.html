@@ -313,6 +313,11 @@
     // ─── DATA SOURCES — ALL CORRECT CSV FORMAT ────────────────────────────────
     const FUEL_SOURCES = {
       // 👉 PASTE GATAKA ROAD PRODUCT-TAB CSV LINK(S) HERE (used for the live ticker)
+      // NOTE: rows from 2026.07.15 onward currently show #REF! errors in the
+      // source sheet (broken formula references) — those rows parse to 0 and
+      // get filtered out automatically, so July will show data through the 14th
+      // until the sheet formulas are fixed.
+      "July 2026": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLs9K7MNuhJvyh9bjt1JoJmjXNEajOJrYVE9oXZFL2gyA_QFDJobYHK3IarMU-l8P54JGnrJef3r6W/pub?gid=1772695434&single=true&output=csv",
       "June 2026": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Vge2bjSMRupBbKxo0eIcoTUYUIXV0NaPbH8St93p5cWqvTnUJJ-9yY-mMNEA6beUIGpqi0lqw1qs/pub?gid=1772695434&single=true&output=csv",
     };
 
@@ -399,7 +404,9 @@
             const obj = {};
             headers.forEach((h, i) => { obj[h] = cols[i] || ''; });
 
-            const dv = (obj.DATE || '').trim();
+            // Use the first column by POSITION, not by header name — the
+            // published sheet may call it "DATE", "Column 1", or leave it blank.
+            const dv = (cols[0] || '').trim();
             if (dv && !dv.toUpperCase().includes('TOTAL')) {
               const p = dv.split('.');
               if (p.length === 3) {
